@@ -61,3 +61,18 @@ def delete_review(request, id, review_id):
     review = get_object_or_404(Review, id=review_id, user=request.user)
     review.delete()
     return redirect('movies.show', id=id)
+
+@login_required
+def add_rating(request, movie_id):
+    movie = get_object_or_404(Movie, pk=movie_id)
+
+    vote = 'like' in request.POST
+    
+    Review.objects.update_or_create(
+        user=request.user, 
+        movie=movie,
+        defaults={'liked': vote}
+    )
+    
+    # Redirect back to the movie detail page
+    return redirect('movies:detail', movie_id=movie.id)

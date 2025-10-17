@@ -9,6 +9,15 @@
         <hr />
         <p><b>Description:</b> {{ template_data.movie.description }}</p>
         <p><b>Price:</b> ${{ template_data.movie.price }}</p>
+        <hr>
+          <h5>Community Rating: {{ template_data.movie.like_percentage }}% Liked This</h5>
+
+          <form action="{% url 'movies:add_rating' template_data.movie.id %}" method="post" class="mt-2 mb-3">
+            {% csrf_token %}
+            <button type="submit" name="like" class="btn btn-success">👍 Thumbs Up</button>
+            <button type="submit" name="dislike" class="btn btn-danger">👎 Thumbs Down</button>
+          </form>
+        <hr>
         <p class="card-text">
           <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
             <div class="row">
