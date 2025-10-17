@@ -4,15 +4,60 @@
   <meta charset="utf-8" />
   <title>World Map</title>
   <link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
 
   <style>
     html, body, #map { height: 100%; margin: 0; }
+    
+    /* Tooltip styling */
+    .movie-tooltip {
+      padding: 10px;
+      background: white;
+      border: 2px solid #3388ff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      min-width: 200px;
+    }
+    
+    .movie-tooltip img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .movie-tooltip h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .movie-tooltip .stats {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .movie-tooltip .country-name {
+      font-weight: bold;
+      color: #3388ff;
+      margin-bottom: 8px;
+    }
+    
+    .no-data {
+      color: #999;
+      font-style: italic;
+    }
+    
+    /* Highlight effect on hover */
+    .country-highlight {
+      fill-opacity: 0.7;
+      stroke-width: 2;
+    }
   </style>
 </head>
 <body>
@@ -31,10 +76,60 @@
       .then(response => response.json())
       .then(data => {
         const geojson = JSON.parse(data);
+        
         L.geoJSON(geojson, {
-          style: { color: "#3388ff", weight: 1 },
+          style: { 
+            color: "#3388ff", 
+            weight: 1,
+            fillColor: "#3388ff",
+            fillOpacity: 0.2
+          },
           onEachFeature: (feature, layer) => {
-            layer.bindPopup(feature.properties.name);
+            const countryName = feature.properties.name;
+            const topMovie = feature.properties.top_movie;
+            
+            // Create tooltip content
+            let tooltipContent = `<div class="movie-tooltip">`;
+            tooltipContent += `<div class="country-name">${countryName}</div>`;
+            
+            if (topMovie) {
+              if (topMovie.image) {
+                tooltipContent += `<img src="${topMovie.image}" alt="${topMovie.name}">`;
+              }
+              tooltipContent += `<h3>${topMovie.name}</h3>`;
+              tooltipContent += `<div class="stats">`;
+              tooltipContent += `📊 Views: ${topMovie.views}<br>`;
+              tooltipContent += `🛒 Orders: ${topMovie.orders}`;
+              tooltipContent += `</div>`;
+            } else {
+              tooltipContent += `<div class="no-data">No movie data available</div>`;
+            }
+            
+            tooltipContent += `</div>`;
+            
+            // Bind tooltip (shows on hover)
+            layer.bindTooltip(tooltipContent, {
+              sticky: true,  // Tooltip follows mouse
+              className: 'custom-tooltip'
+            });
+            
+            // Optional: Bind popup (shows on click)
+            layer.bindPopup(tooltipContent);
+            
+            // Hover effects
+            layer.on('mouseover', function() {
+              this.setStyle({
+                fillOpacity: 0.5,
+                weight: 2
+              });
+            });
+            
+            layer.on('mouseout', function() {
+              this.setStyle({
+                fillOpacity: 0.2,
+                weight: 1
+              });
+            });
           }
         }).addTo(map);
       })

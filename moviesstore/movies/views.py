@@ -18,6 +18,12 @@ def show(request, id):
     movie = Movie.objects.get(id=id)
     reviews = Review.objects.filter(movie=movie)
 
+    #update view count
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        if request.user.profile.world_border:
+            movie.increment_views(request.user.profile.world_border.name)
+            
+
     template_data = {}
     template_data['title'] = movie.name
     template_data['movie'] = movie

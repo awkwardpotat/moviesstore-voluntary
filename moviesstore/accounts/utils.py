@@ -1,0 +1,71 @@
+import requests #pip install requests
+from django.contrib.gis.geos import Point
+from map.models import WorldBorder
+
+def get_client_ip(request):
+    """Extract client IP from request"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    print("GETTING IP DONE: ", ip)
+    return ip
+
+def get_location_from_ip(ip_address):
+    """
+    Get lat/long from IP address using ipapi.co (free, no signup)
+    Returns dict with 'latitude', 'longitude', or None if failed
+    """
+    print("GETTING LAT/LONG START")
+    try:
+        # For testing locally, you might get 127.0.0.1
+        if ip_address == '127.0.0.1' or ip_address.startswith('192.168'):
+            print("GETTING LAT/LONG DONE", 29.7604, " ", -95.3698)
+            # Use a default location for local testing (e.g., Houston)
+            return {'latitude': 29.7604, 'longitude': -95.3698}
+        
+        response = requests.get(f'https://ipapi.co/{ip_address}/json/', timeout=5)
+        data = response.json()
+        
+        if 'latitude' in data and 'longitude' in data:
+            return {
+                'latitude': data['latitude'],
+                'longitude': data['longitude']
+            }
+    except Exception as e:
+        print(f"Error getting location: {e}")
+    
+    
+    return None
+
+def get_world_border_from_coordinates(lat, lon):
+    """
+    Given lat/lon, return the WorldBorder object
+    """
+    try:
+        pnt = Point(lon, lat, srid=4326)  # Note: Point is (longitude, latitude)
+        border = WorldBorder.objects.filter(mpoly__contains=pnt).first()
+        return border
+    except Exception as e:
+        print(f"Error finding border: {e}")
+        return None
+
+def set_user_location_from_ip(user, request):
+    """
+    Complete function: Get user's location from IP and set their WorldBorder
+    """
+    ip = get_client_ip(request)
+    location = get_location_from_ip(ip)
+    
+    if location:
+        border = get_world_border_from_coordinates(
+            location['latitude'], 
+            location['longitude']
+        )
+        if border:
+            user.profile.world_border = border
+            user.profile.save()
+            return True
+    
+    return False
