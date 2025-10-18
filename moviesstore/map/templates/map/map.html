@@ -1,6 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
   <meta charset="utf-8" />
   <title>World Map</title>
   <link
@@ -8,59 +8,79 @@
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
   <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"> //this loads the map!!
   </script>
-
   <style>
-    html, body, #map { height: 100%; margin: 0; }
-    
-    /* Tooltip styling */
+    html, body, #map { height: 600px; width: 100%, margin: 0; }
+
+/* Tooltip styling - used to be bigger but then it wouldn't fit 2 movies */
     .movie-tooltip {
-      padding: 10px;
+      padding: 8px;
       background: white;
       border: 2px solid #3388ff;
-      border-radius: 8px;
+      border-radius: 6px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      min-width: 200px;
+      min-width: 300px;
+      max-width: 400px;
+      font-size: 12px;
     }
-    
+
+    /* Horizontal container for movies */
+    .movies-container {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;  /* Scroll if needed */
+    }
+
+    .movie-item {
+      flex: 1;
+      min-width: 130px;
+      text-align: center;
+    }
+
     .movie-tooltip img {
-      width: 100%;
-      height: auto;
+      width: auto;
+      height: 80px;
+      max-width: 100%;
       border-radius: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
-    
+
     .movie-tooltip h3 {
-      margin: 0 0 8px 0;
-      font-size: 16px;
+      margin: 0 0 5px 0;
+      font-size: 11px;
       color: #333;
     }
-    
+
     .movie-tooltip .stats {
-      font-size: 14px;
+      font-size: 10px;
       color: #666;
     }
-    
+
     .movie-tooltip .country-name {
       font-weight: bold;
       color: #3388ff;
       margin-bottom: 8px;
+      font-size: 14px;
+      text-align: center;
     }
-    
+
     .no-data {
       color: #999;
       font-style: italic;
+      font-size: 11px;
     }
-    
-    /* Highlight effect on hover */
-    .country-highlight {
-      fill-opacity: 0.7;
-      stroke-width: 2;
+
+    /* add spacing between movies!! */
+    .movie-tooltip > div:not(:last-child) {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
     }
   </style>
-</head>
-<body>
   <div id="map"></div>
 
   <script>
@@ -71,69 +91,76 @@
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Fetch GeoJSON data from Django endpoint
+    // get GeoJSON
     fetch("{% url 'map.world_data' %}")
       .then(response => response.json())
       .then(data => {
         const geojson = JSON.parse(data);
-        
+
         L.geoJSON(geojson, {
-          style: { 
-            color: "#3388ff", 
-            weight: 1,
-            fillColor: "#3388ff",
-            fillOpacity: 0.2
-          },
-          onEachFeature: (feature, layer) => {
-            const countryName = feature.properties.name;
-            const topMovie = feature.properties.top_movie;
-            
-            // Create tooltip content
-            let tooltipContent = `<div class="movie-tooltip">`;
-            tooltipContent += `<div class="country-name">${countryName}</div>`;
-            
-            if (topMovie) {
-              if (topMovie.image) {
-                tooltipContent += `<img src="${topMovie.image}" alt="${topMovie.name}">`;
-              }
-              tooltipContent += `<h3>${topMovie.name}</h3>`;
-              tooltipContent += `<div class="stats">`;
-              tooltipContent += `📊 Views: ${topMovie.views}<br>`;
-              tooltipContent += `🛒 Orders: ${topMovie.orders}`;
-              tooltipContent += `</div>`;
-            } else {
-              tooltipContent += `<div class="no-data">No movie data available</div>`;
-            }
-            
-            tooltipContent += `</div>`;
-            
-            // Bind tooltip (shows on hover)
-            layer.bindTooltip(tooltipContent, {
-              sticky: true,  // Tooltip follows mouse
-              className: 'custom-tooltip'
-            });
-            
-            // Optional: Bind popup (shows on click)
-            layer.bindPopup(tooltipContent);
-            
-            // Hover effects
-            layer.on('mouseover', function() {
-              this.setStyle({
-                fillOpacity: 0.5,
-                weight: 2
-              });
-            });
-            
-            layer.on('mouseout', function() {
-              this.setStyle({
-                fillOpacity: 0.2,
-                weight: 1
-              });
-            });
-          }
-        }).addTo(map);
+  style: {
+    color: "#3388ff",
+    weight: 1,
+    fillColor: "#3388ff",
+    fillOpacity: 0.2
+  },
+  onEachFeature: (feature, layer) => {
+    const countryName = feature.properties.name;
+    const topMovies = feature.properties.top_movies;
+
+    // create tooltip content
+    let tooltipContent = `<div class="movie-tooltip">`;
+    tooltipContent += `<div class="country-name">${countryName}</div>`;
+
+    if (topMovies && topMovies.length > 0) {
+      tooltipContent += `<div class="movies-container">`;
+
+      topMovies.forEach((movie, index) => {
+        tooltipContent += `<div class="movie-item">`;
+        tooltipContent += `<strong>#${index + 1}</strong><br>`;
+        if (movie.image) {
+          tooltipContent += `<img src="${movie.image}" alt="${movie.name}">`;
+        }
+        tooltipContent += `<h3>${movie.name}</h3>`;
+        tooltipContent += `<div class="stats">`;
+        tooltipContent += `📊 ${movie.views}<br>`;
+        tooltipContent += `🛒 ${movie.orders}`;
+        tooltipContent += `</div>`;
+        tooltipContent += `</div>`;
+      });
+
+      tooltipContent += `</div>`;  // Close movies-container
+    } else {
+      tooltipContent += `<div class="no-data">No movie data available</div>`;
+    }
+
+    tooltipContent += `</div>`;
+
+    // Bind tooltip and popup
+    layer.bindTooltip(tooltipContent, {
+      sticky: true,
+      className: 'custom-tooltip'
+    });
+
+    layer.bindPopup(tooltipContent);
+
+    // Hover effects
+    layer.on('mouseover', function() {
+      this.setStyle({
+        fillOpacity: 0.5,
+        weight: 2
+      });
+    });
+
+    layer.on('mouseout', function() {
+      this.setStyle({
+        fillOpacity: 0.2,
+        weight: 1
+      });
+    });
+  }
+}).addTo(map);
       })
       .catch(err => console.error(err));
   </script>
-</body>
-</html>
+{% endblock content %}

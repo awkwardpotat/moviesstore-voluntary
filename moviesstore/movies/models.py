@@ -11,9 +11,17 @@ class Movie(models.Model):
     views_by_region = models.JSONField(default=dict, blank=True)
     orders_by_region = models.JSONField(default=dict, blank=True)
 
+    def like_ratio(self):
+        total_ratings = self.rating_set.count()
+        if total_ratings == 0:
+            return "N/A"
+        likes = self.rating_set.filter(liked=True).count()
+        return int((likes / total_ratings) * 100)
+
+
     def __str__(self):
         return str(self.id) + ' - ' + self.name
-    
+
     def increment_views(self, region_name):
         """Increment view count for a specific region"""
         print("before views: ", self.views_by_region)
@@ -23,7 +31,7 @@ class Movie(models.Model):
             self.views_by_region[region_name] += 1
         print("after views: ", self.views_by_region)
         self.save()
-    
+
     def increment_orders(self, region_name):
         """Increment order count for a specific region"""
         print("before orders: ", self.orders_by_region)
@@ -43,3 +51,15 @@ class Review(models.Model):
 
     def __str__(self):
         return str(self.id) + ' - ' + self.movie.name
+
+class Rating(models.Model):
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    liked = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('movie', 'user')
+
+    def __str__(self):
+        return f"{self.user.username}'s rating for {self.movie.title}"

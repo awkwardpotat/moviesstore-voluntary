@@ -1,4 +1,4 @@
-import requests #pip install requests
+import requests
 from django.contrib.gis.geos import Point
 from map.models import WorldBorder
 import json
@@ -17,66 +17,63 @@ def get_client_ip(request):
 
 def get_location_from_ip(ip_address):
     """
-    Get lat/long from IP address using ipapi.co (free, no signup)
+    Get lat/long from IP address using ip-api
     Returns dict with 'latitude', 'longitude', or None if failed
     """
     print("GETTING LAT/LONG START")
     try:
         # For testing locally, you might get 127.0.0.1
         if ip_address == '127.0.0.1' or ip_address.startswith('192.168'):
-            print("GETTING LAT/LONG DONE", 29.7604, " ", -95.3698)
             # Use a default location for local testing (e.g., Houston)
             return {'latitude': 29.7604, 'longitude': -95.3698}
-        
-        response = requests.get(f'https://ipapi.co/{ip_address}/json/', timeout=5)
+
+        response = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=5)
         data = response.json()
-        
-        if 'latitude' in data and 'longitude' in data:
+        print(data)
+        print("lat: ", data['lat'], " and long: ", data['lon'], " and type=", type(data['lat']))
+        if 'lat' in data and 'lon' in data:
             return {
-                'latitude': data['latitude'],
-                'longitude': data['longitude']
+                'latitude': data['lat'],
+                'longitude': data['lon']
             }
     except Exception as e:
         print(f"Error getting location: {e}")
-    
-    
+
+
     return None
 def get_world_border_from_coordinates(latitude, longitude):
     """
     Find which country contains the given coordinates (accurate)
     """
     point = Point(longitude, latitude)  # Shapely uses (lon, lat) order
-    
     for border in WorldBorder.objects.all():
         try:
             # Load the polygon geometry from stored JSON
             geometry = json.loads(border.mpoly_json)
             polygon = shape(geometry)
-            
+
             # Check if point is inside this country's borders
             if polygon.contains(point):
                 return border
         except:
             continue
-    
+
     return None  # Not found in any country
 
 def set_user_location_from_ip(user, request):
     """
     Complete function: Get user's location from IP and set their WorldBorder
     """
-    print("user logged in so trying to get their location")
     ip = get_client_ip(request)
     location = get_location_from_ip(ip)
-    
+
     if location:
         border = get_world_border_from_coordinates(
-            location['latitude'], 
+            location['latitude'],
             location['longitude']
         )
         if border:
             user.profile.world_border = border
             user.profile.save()
             return True
-    
     return False
