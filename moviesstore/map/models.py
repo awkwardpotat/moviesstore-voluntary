@@ -1,4 +1,4 @@
-from django.contrib.gis.db import models
+from django.db import models
 
 # Create your models here.
 class WorldBorder(models.Model):
@@ -14,7 +14,7 @@ class WorldBorder(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
 
-    mpoly = models.MultiPolygonField()
+    mpoly_json = models.TextField(default='{"type":"MultiPolygon","coordinates":[]')
     def __str__(self):
         return self.name
     

@@ -1,9 +1,12 @@
 import requests #pip install requests
 from django.contrib.gis.geos import Point
 from map.models import WorldBorder
+import json
+from shapely.geometry import Point, shape
 
 def get_client_ip(request):
     """Extract client IP from request"""
+    print("GETTING IP START")
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -38,23 +41,31 @@ def get_location_from_ip(ip_address):
     
     
     return None
-
-def get_world_border_from_coordinates(lat, lon):
+def get_world_border_from_coordinates(latitude, longitude):
     """
-    Given lat/lon, return the WorldBorder object
+    Find which country contains the given coordinates (accurate)
     """
-    try:
-        pnt = Point(lon, lat, srid=4326)  # Note: Point is (longitude, latitude)
-        border = WorldBorder.objects.filter(mpoly__contains=pnt).first()
-        return border
-    except Exception as e:
-        print(f"Error finding border: {e}")
-        return None
+    point = Point(longitude, latitude)  # Shapely uses (lon, lat) order
+    
+    for border in WorldBorder.objects.all():
+        try:
+            # Load the polygon geometry from stored JSON
+            geometry = json.loads(border.mpoly_json)
+            polygon = shape(geometry)
+            
+            # Check if point is inside this country's borders
+            if polygon.contains(point):
+                return border
+        except:
+            continue
+    
+    return None  # Not found in any country
 
 def set_user_location_from_ip(user, request):
     """
     Complete function: Get user's location from IP and set their WorldBorder
     """
+    print("user logged in so trying to get their location")
     ip = get_client_ip(request)
     location = get_location_from_ip(ip)
     
