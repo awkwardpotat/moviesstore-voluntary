@@ -2,7 +2,7 @@ import os
 import django
 import json
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'moviesstore.settings')  # Change to your project name!
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'moviesstore.settings') 
 django.setup()
 
 from map.models import WorldBorder
